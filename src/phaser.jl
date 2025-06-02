@@ -166,9 +166,9 @@ function do_phasing!(phaser::Phaser; action::Dict{String,Function}=default_callb
     a_r = phaser.ampl[phaser.real_orbits] # The amplitudes for the real orbits
     a_c = phaser.ampl[phaser.complex_orbits] # The amplitudes for the complex orbits
 
-    # Create the real and complex phases and set their inital values randomly
-    ϕ_r = rand([-1.0, 1.0], length(phaser.real_orbits))
-    ϕ_c = exp.(2π * im * rand(length(phaser.complex_orbits)))
+    # Set the initial phases randomly
+    f_r = a_r .* rand([-1.0, 1.0], length(phaser.real_orbits))
+    f_c = a_c .* exp.(2π * im * rand(length(phaser.complex_orbits)))
 
     set_num_threads(4) # TODO: Set the number of threads automatically
 
@@ -181,8 +181,6 @@ function do_phasing!(phaser::Phaser; action::Dict{String,Function}=default_callb
     # Enter the phasing loop
     coeff = 1.0
     for i = 1:200 # TODO: pass the number of iterations
-        f_r = a_r .* ϕ_r # The amplitudes for the real orbits
-        f_c = a_c .* ϕ_c # The amplitudes for the complex orbits
         mul!(phaser.f, phaser.p2f_r, f_r) # Apply the real phases
         mul!(aux, phaser.p2f_c1, f_c) # Apply the complex phases
         phaser.f .+= aux # Add the complex phases to the real phases
@@ -219,7 +217,8 @@ function do_phasing!(phaser::Phaser; action::Dict{String,Function}=default_callb
             f_out=f_r_back[i]
             df=f_out-f_in
             if abs(f_in) < 2*rand()*coeff*abs(df)
-                ϕ_r[i] = real(f_out/f_in)>0 ? ϕ_r[i] : -ϕ_r[i]
+                ϕ = real(f_out/f_in)>0 ? sign(f_r[i]) : -sign(f_r[i])
+                f_r[i]=ϕ * a_r[i] 
             end
         end
         for i in 1:length(phaser.complex_orbits)
@@ -227,7 +226,8 @@ function do_phasing!(phaser::Phaser; action::Dict{String,Function}=default_callb
             f_out=f_c_back[i]
             df=f_out-f_in
             if abs(f_in) < 2*rand()*coeff*abs(df)
-                ϕ_c[i] = f_out/abs(f_out)
+                ϕ = f_out/abs(f_out)
+                f_c[i]=ϕ * a_c[i]
             end
         end
         coeff*=0.99
