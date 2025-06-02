@@ -30,35 +30,35 @@ function find_injective_projector(dd::DiffractionData{N,D,T}, sparseness::Real=8
 end
 
 # Returns the formfactor used for the synthetic data
-function formfactor(dd::DiffractionData, windowing_function::Function)
-    q_max = maximum(physicalnorm(dd, bp.o.aps[1].k) for bp in dd.bps) # The maximum norm of the physical wavevector
-    q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
-    function ff(q::Real)
-        if q > q_max
-            return 0.0
-        else
-            return windowing_function(q / q_max)
-        end
-    end
-    return ff
-end
+# function formfactor(dd::DiffractionData, windowing_function::Function)
+#     q_max = maximum(physicalnorm(dd, bp.o.aps[1].k) for bp in dd.bps) # The maximum norm of the physical wavevector
+#     q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
+#     function ff(q::Real)
+#         if q > q_max
+#             return 0.0
+#         else
+#             return windowing_function(q / q_max)
+#         end
+#     end
+#     return ff
+# end
 
 # Returns the formfactor used for the real diffraction data for a given composition and Debye Waller
 # factor
-function formfactor(dd::DiffractionData, windowing_function::Function, composition::Vector{Tuple{String,R}}, b_factor::Real) where {R<:Real}
-    q_max = maximum(physicalnorm(bp.o.aps[1].k, dd) for bp in dd.bps) # The maximum norm of the physical wavevector
-    q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
-    atomic_formfactor = WeightedF0(composition)
-    function ff(q::Real)
-        if q > q_max
-            return 0.0
-        else
-            κ = q / (4 * π) # sin(θ)/λ
-            return windowing_function(q / q_max) / (atomic_formfactor(κ) * exp(-b_factor * κ^2))
-        end
-    end
-    return ff
-end
+# function formfactor(dd::DiffractionData, windowing_function::Function, composition::Vector{Tuple{String,R}}, b_factor::Real) where {R<:Real}
+#     q_max = maximum(physicalnorm(bp.o.aps[1].k, dd) for bp in dd.bps) # The maximum norm of the physical wavevector
+#     q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
+#     atomic_formfactor = WeightedF0(composition)
+#     function ff(q::Real)
+#         if q > q_max
+#             return 0.0
+#         else
+#             κ = q / (4 * π) # sin(θ)/λ
+#             return windowing_function(q / q_max) / (atomic_formfactor(κ) * exp(-b_factor * κ^2))
+#         end
+#     end
+#     return ff
+# end
 
 
 # Utility structure for batch construction of a complex sparse matrix
@@ -77,7 +77,6 @@ nnz_per_column(m::SparseMatrixCSC)::Vector{Int} = diff(m.colptr)
 
 struct Phaser{N}
     dd::DiffractionData
-    ff::Function # The formfactor
     real_orbits::Vector{Int} # The indices of the real orbits in the diffraction data
     complex_orbits::Vector{Int} # The indices of the complex orbits in the diffraction data
     v::SVector{N,Int} # The vector of the injective projector
@@ -89,7 +88,7 @@ struct Phaser{N}
     f::Vector{ComplexF64} # The vector of phased amplitudes
 end
 
-function Phaser(dd::DiffractionData{N}, ff::Function) where {N}
+function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}) where {N}
     v, maxproj = find_injective_projector(dd)
     n = Int(ceil(log2(maxproj)))
     println("Using 2^$(n+1) sampling points")
@@ -101,7 +100,7 @@ function Phaser(dd::DiffractionData{N}, ff::Function) where {N}
         bp = dd.bps[i]
         ap = bp.o.aps[1] # Orbits assumed non-empty
         q = physicalnorm(ap.k, dd)
-        ampl[i] = sqrt(bp.I) * ff(q) # The amplitude
+        ampl[i] = sqrt(bp.I) * formfactors[i] # The amplitude
         if bp.o isa RealOrbit
             push!(real_orbits, i)
         else
@@ -146,7 +145,7 @@ function Phaser(dd::DiffractionData{N}, ff::Function) where {N}
     ρ = zeros(Float64, 2^(n + 1)) # The vector of the density
     f2ρ = plan_irfft(f, 2 * numamps)
     ρ2f = plan_rfft(ρ)
-    return Phaser(dd, ff, real_orbits, complex_orbits, v, numamps, ampl, p2f_r, p2f_c1, p2f_c2, f)
+    return Phaser(dd, real_orbits, complex_orbits, v, numamps, ampl, p2f_r, p2f_c1, p2f_c2, f)
 end
 
 const default_callbacks = Dict{String,Function}("go" => () -> nothing, "show" => (args...) -> nothing, "done" => () -> false)
