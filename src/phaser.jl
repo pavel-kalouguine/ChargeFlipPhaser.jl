@@ -153,7 +153,7 @@ const default_callbacks = Dict{String,Function}("go" => () -> nothing, "show" =>
 
 function do_phasing!(phaser::Phaser; action::Dict{String,Function}=default_callbacks)
     println("Starting phasing...")
-    f = copy(phaser.f) # Working with the copy since FFTW.mul! modifies the input
+    f = similar(phaser.f) # Working space for amplitudes since FFTW.mul! modifies the input
     aux = similar(f) # Auxiliary vector for accumulation
     ρ = zeros(Float64, 2 * phaser.numamps) # The vector of the density
     # Prepare the FFT plans for the direct and inverse FFT
@@ -183,12 +183,12 @@ function do_phasing!(phaser::Phaser; action::Dict{String,Function}=default_callb
     for i = 1:200 # TODO: pass the number of iterations
         f_r = a_r .* ϕ_r # The amplitudes for the real orbits
         f_c = a_c .* ϕ_c # The amplitudes for the complex orbits
-        mul!(f, phaser.p2f_r, f_r) # Apply the real phases
+        mul!(phaser.f, phaser.p2f_r, f_r) # Apply the real phases
         mul!(aux, phaser.p2f_c1, f_c) # Apply the complex phases
-        f += aux # Add the complex phases to the real phases
+        phaser.f .+= aux # Add the complex phases to the real phases
         mul!(aux, phaser.p2f_c2, conj(f_c)) # Apply the conjugate complex phases
-        f += aux # Add the conjugate complex phases to the real and complex phases
-        phaser.f.=f # Save the copy of the phased amplitudes for viewers
+        phaser.f .+= aux # Add the conjugate complex phases to the real and complex phases
+        f.=phaser.f # Copy the amplitudes to the working space
 
         # Compute the density
         mul!(ρ, f2ρ, f) # Apply the inverse FFT
