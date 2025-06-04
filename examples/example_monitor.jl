@@ -25,7 +25,7 @@ function example_monitor()
     add_panel!(pm, (2, 3), s3, "Three fold axis", 1)
 
     Base.display(pm.fig)    
-    do_phasing!(phaser, action=action(pm))
+    do_phasing!(phaser, action=action(pm), algorithm=RandomizedMedianFlip())
 end
 
 example_monitor()
