@@ -153,3 +153,33 @@ function add_peak!(dd::DiffractionData{N, D, T}, k::SVector{N,T}, I::AbstractFlo
     push!(dd.bps, bp)
     length(dd.bps)
 end
+
+function find_injective_projector(dd::DiffractionData{N,D,T}, sparseness::Real=8.0)::Tuple{SVector{N,T},T} where {N,D,T<:Integer}
+    # Finds the vector v such as the scalar products of v with all wave vectors in the 
+    # diffraction data are distinct
+    all_k = [k for k in keys(dd.k_to_bp)]
+    # Compute the covariance matrix of the wave vectors in dd
+    M = MMatrix{N,N,Float64}(zeros(Float64, N, N))
+    for k in all_k
+        M .+= k * k'
+    end
+    M = Symmetric(M) # Forces M to be symmetric
+    Minv = inv(M)
+    rmax = maximum(k' * Minv * k for k in all_k)
+    M *= rmax
+    S = M^-0.5 # The scaling matrix
+    maxproj = sparseness * length(all_k) # Maximal possible absolute value of the scalar product k⋅v
+    println("Finding an injective projector...")
+    i=0
+    while true
+        i+=1
+        r = SVector{N}(randn(N))
+        r *= (maxproj / norm(r)) # make a random vector of length maxproj
+        v = T.(round.(S * r)) # Round the scaled r to the nearest integer vector
+        xx = [v ⋅ k for k in all_k] # Compute the scalar products
+        if length(unique(xx)) == length(xx) # Check if all scalar products are distinct
+            println("Projector $v found after $i iterations")
+            return v, maximum(abs.(xx))
+        end
+    end    
+end
