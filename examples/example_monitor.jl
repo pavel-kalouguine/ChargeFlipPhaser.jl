@@ -1,4 +1,4 @@
-using ChargeFlipPhaser, StaticArrays, LinearAlgebra, GLMakie
+using ChargeFlipPhaser, GLMakie
 
 function example_monitor()
     include("icosahedral/CdYb/load.jl")
