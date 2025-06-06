@@ -58,7 +58,11 @@ end
    Parameters:
     - `G`: A `SpaceGroupQuotient` object representing the symmetry group of the crystal
         structure.
-    - `md`: A static matrix representing the metric data of the crystal structure.
+    - `md`: A static matrix representing the metric data of the crystal structure. The matrix
+        should be of size DxN, where D is the number of dimensions in real space and N is the
+        order of the module of the Bragg peak vectors (the dimension of the space group). The 
+        physical wavevector `q` corresponding to the integer vector of indices `k` is given by 
+        `q = md * k`. 
    Returns a new `DiffractionData` object with an empty vector of Bragg
    peaks and the specified symmetry group.
 """ 
@@ -182,4 +186,17 @@ function find_injective_projector(dd::DiffractionData{N,D,T}, sparseness::Real=8
             return v, maximum(abs.(xx))
         end
     end    
+end
+
+function formfactors_synthetic(dd::DiffractionData, windowing_function::Function)
+    q_max = maximum(physicalnorm(bp.o.aps[1].k, dd) for bp in dd.bps) # The maximum norm of the physical wavevector
+    q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
+    ff= ones(Float64, length(dd.bps)) # The form factor is a constant function
+    for i in 1:length(dd.bps)
+        bp = dd.bps[i]
+        ap = bp.o.aps[1] # Take the first vector of the orbit
+        q = physicalnorm(ap.k, dd)
+        ff[i] = windowing_function(q / q_max)
+    end
+    ff
 end
