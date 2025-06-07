@@ -72,7 +72,8 @@ struct Cutter
     cut::Cut2D
     fproj::Matrix{ComplexF64} # The projection of the amplitudes
     ρ::Matrix{Float64} # The cut of the density
-    f2fproj::SparseMatrixCSC{ComplexF64} # The sparse matrix to convert the 1D amplitudes to those of the cut
+    f2fproj1::SparseMatrixCSC{ComplexF64} # The sparse matrix to convert the 1D amplitudes to those of the cut
+    f2fproj2::SparseMatrixCSC{ComplexF64} # Idem for the antipodes
     fproj2ρ # The irfft plan
 end
 
@@ -84,15 +85,13 @@ function Cutter(phaser::Phaser, cut::Cut2D)
     mf=div(m,2)+1 # The first dimension in the frequencies domain
     fproj=zeros(ComplexF64, mf,n)
     ρ=zeros(Float64, m, n)
-    irows=Int[]
-    icols=Int[]
-    vals=ComplexF64[]
+    cdata1 = SparseData()
+    cdata2 = SparseData()
+    # irows=Int[]
+    # icols=Int[]
+    # vals=ComplexF64[]
     # Loop over all wavevectors
     for k in keys(phaser.dd.k_to_bp)
-        p=phaser.v⋅k # The projected wavevector
-        if p<0
-            continue
-        end
         # Project the wavevector onto the cut
         i,j=alias(cut.direction*k, cut.size)
         if i>mf
@@ -100,19 +99,32 @@ function Cutter(phaser::Phaser, cut::Cut2D)
         end
         # Flatten the indices
         ind=i+(j-1)*mf
-        push!(irows, ind)
-        push!(icols, p+1)
-        push!(vals, exp(2π*im*(k⋅cut.origin))) # The value     
+        p1=phaser.v⋅k # The 1D projection of the wavevector
+        p2=-p1 # The antipode
+        if p1>0
+            push!(cdata1.irows, ind)
+            push!(cdata1.icols, p1+1)
+            push!(cdata1.vals, exp(2π*im*(k⋅cut.origin))) # The value 
+        else
+            push!(cdata2.irows, ind)
+            push!(cdata2.icols, p2+1)
+            push!(cdata2.vals, exp(-2π*im*(k⋅cut.origin))) # The value 
+        end
+        
+        
+            
     end
-    f2fproj=sparse(irows, icols, vals, n*mf, phaser.numamps+1)
+    f2fproj1=sparse(cdata1.irows, cdata1.icols, cdata1.vals, n*mf, phaser.numamps+1)
+    f2fproj2=sparse(cdata2.irows, cdata2.icols, cdata2.vals, n*mf, phaser.numamps+1)
     fproj2ρ=plan_irfft(fproj, m)
-    Cutter(phaser, cut, fproj, ρ, f2fproj, fproj2ρ)
+    Cutter(phaser, cut, fproj, ρ, f2fproj1, f2fproj2, fproj2ρ)
 end
 
 function make_cut(cutter::Cutter)
-    mul!(reshape(cutter.fproj, :), cutter.f2fproj, cutter.phaser.f)
+    mul!(reshape(cutter.fproj, :), cutter.f2fproj1, cutter.phaser.f)
+    mul!(reshape(cutter.fproj, :), cutter.f2fproj2, conj(cutter.phaser.f), 1.0, 1.0)
     mul!(cutter.ρ, cutter.fproj2ρ, cutter.fproj)
-    cutter.ρ*cutter.cut.size[1]*cutter.cut.size[2] # Normalize
+    cutter.ρ*length(cutter.fproj) # Normalize
 end
 
 function add_panel!(pm::PhasingMonitor, (i, j)::Tuple, cut::Cut2D, title::String, aspect::Real)
