@@ -33,17 +33,6 @@
 # end
 
 
-# Utility structure for batch construction of a complex sparse matrix
-struct SparseData
-    irows::Vector{Int}
-    icols::Vector{Int}
-    vals::Vector{ComplexF64}
-end
-
-function SparseData()
-    return SparseData(Vector{Int}(), Vector{Int}(), Vector{ComplexF64}())
-end
-
 # Utility function returning the per-column numbers of non-zero elements in a CSC sparse matrix
 nnz_per_column(m::SparseMatrixCSC)::Vector{Int} = diff(m.colptr)
 
