@@ -1,10 +1,11 @@
 module ChargeFlipPhaser
 import StaticArrays: SMatrix,SVector, MMatrix
 import SparseArrays: sparse, nnz, SparseMatrixCSC
-import LinearAlgebra: norm, transpose, inv, ⋅, Symmetric, tr, mul!, axpy!
+import LinearAlgebra: norm, transpose, inv, ⋅, Symmetric, tr, mul!, axpy!, det, svd
 import SpaceGroups: RealOrbit, ComplexOrbit, PhysicalOrbit, ExtinctOrbit, SpaceGroupQuotient, make_orbit
 import FFTW: plan_irfft, plan_rfft, mul!, set_num_threads, irfft
 import Statistics: median
+import NormalForms: snf
 using Makie, GLMakie
 
 export WeightedF0, DiffractionData, add_peak!, find_injective_projector, 
