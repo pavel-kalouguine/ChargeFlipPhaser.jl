@@ -4,7 +4,7 @@ function example_monitor()
     include("homometric.jl")
 
     kmax=30
-    dd = Homometric.generate_difdata(kmax)
+    dd = Homometric.dd
 
     # Create a phaser with the generated diffraction data and a form factor function
     formfactors= formfactors_synthetic(dd, ball_autocorr)
