@@ -203,9 +203,7 @@ function basis_of_dense_packing(n::Int)::Matrix{Float64}
 end
 
 
-function find_injective_projector(dd::DiffractionData{N,D,T}, sparseness::Real=8.0)::Tuple{SVector{N,T},T} where {N,D,T<:Integer}
-    # Finds the vector v such as the scalar products of v with all wave vectors in the 
-    # diffraction data are distinct
+function find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)::Tuple{SVector{N,T},T} where {N,D,T<:Integer}
     all_k = [k for k in keys(dd.k_to_bp)]
     # Compute the covariance matrix of the wave vectors in dd
     M = MMatrix{N,N,Float64}(zeros(Float64, N, N))
@@ -218,22 +216,13 @@ function find_injective_projector(dd::DiffractionData{N,D,T}, sparseness::Real=8
     Minv = inv(M)
     rmax = maximum(k' * Minv * k for k in all_k)
     M *= rmax
-    println(sqrt(det(M)))
-
-
-
     scaling = M^0.5 # The scaling matrix
-
-    # radmax=maximum(norm(S*k) for k in all_k) 
-    # println("radmax=$radmax")
-
-    #maxproj = sparseness * length(all_k) # Maximal possible absolute value of the scalar product k⋅v
-
 
     B0 = basis_of_dense_packing(N) # The basis of the dense packing lattice
 
     println("Finding an injective projector...")
     i = 0
+    candidates=Vector{Tuple{SVector{N,T},T}}()
     while true
         i += 1
         R = svd(randn(N, N)).U # Random orthogonal matrix
@@ -243,26 +232,27 @@ function find_injective_projector(dd::DiffractionData{N,D,T}, sparseness::Real=8
         try
             s = snf(L)
         catch e
-            println("SNF failed: $e")
-            continue
+            continue # SNF may fail because of integer overflow. Try again with a different random matrix
         end
         P=L*s.V 
-        println(P[:, end])
         if !all(iszero,P[1:(end-1), end])
-            println("not good")
-            continue
+            continue # The projector may be non-injective due to rounding of L in the wrong way, try again
         end
-        #v = SVector{N, Int}(s.V[:, end]) # Take the last column of the right unimodular factor as the projector
-        v=SVector{2, Int}([-20, -3])
-        println(v)
-        println(typeof(v))
+        v = SVector{N, Int}(s.V[:, end]) # Take the last column of the right unimodular factor as the projector
         xx = [v ⋅ k for k in all_k] # Compute the scalar products
         if length(unique(xx)) == length(xx) # Check if all scalar products are distinct
-            println("Projector $v found after $i iterations")
-            println("Maximal scalar product: $(maximum(abs.(xx)))")
-            return v, maximum(abs.(xx))
+            push!(candidates, (v, maximum(abs.(xx))))
+            if length(candidates) >= num_candidates
+                break # We have enough candidates, stop the search
+            end
         end
     end
+    # Find the candidate with the minimal maximal scalar product
+    v, maxprod = argmin(x -> x[2], candidates) # Take the candidate with the minimal maximal scalar product
+    println("Projector $v found after $i iterations")
+    println("Maximal scalar product: $maxprod")
+    return (v, maxprod)
+
 end
 
 function formfactors_synthetic(dd::DiffractionData, windowing_function::Function)
