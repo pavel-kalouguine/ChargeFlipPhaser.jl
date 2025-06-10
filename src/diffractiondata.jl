@@ -15,7 +15,7 @@
    
 """
 struct BraggPeaksOrbit{N,T<:Integer}
-    o::PhysicalOrbit{N, T}
+    o::PhysicalOrbit{N,T}
     I::AbstractFloat
 end
 
@@ -48,7 +48,7 @@ struct DiffractionData{N,D,T<:Integer}
     G::SpaceGroupQuotient{N,T}
     md::SMatrix{D,N,Float64}
     bps::Vector{BraggPeaksOrbit{N,T}}
-    k_to_bp::Dict{SVector{N,T}, BraggPeaksOrbit{N,T}}
+    k_to_bp::Dict{SVector{N,T},BraggPeaksOrbit{N,T}}
 end
 
 """
@@ -65,9 +65,9 @@ end
         `q = md * k`. 
    Returns a new `DiffractionData` object with an empty vector of Bragg
    peaks and the specified symmetry group.
-""" 
+"""
 function DiffractionData(G::SpaceGroupQuotient{N,T}, md::SMatrix{D,N,Float64}) where {N,D,T<:Integer}
-    DiffractionData{N,D,T}(G, md, BraggPeaksOrbit{N,T}[], Dict{SVector{N,T}, BraggPeaksOrbit{N,T}}())
+    DiffractionData{N,D,T}(G, md, BraggPeaksOrbit{N,T}[], Dict{SVector{N,T},BraggPeaksOrbit{N,T}}())
 end
 
 """
@@ -96,7 +96,7 @@ function metric_data_inconsistency(dd::DiffractionData{N,D,T}) where {N,D,T<:Int
     end
 
     max_inconsistency / trace_r
-end 
+end
 
 """
    physicalnorm(k::SVector{N, T}, dd::DiffractionData{N,D,T}) where {N,D,T<:Integer}
@@ -109,7 +109,7 @@ end
    Returns:
     - The physical norm of the physical wave vector corresponding to `k`, calculated as `norm(dd.md*k)`.
 """
-physicalnorm(k::SVector{N, T}, dd::DiffractionData{N,D,T}) where {N,D,T<:Integer}=norm(dd.md*k) 
+physicalnorm(k::SVector{N,T}, dd::DiffractionData{N,D,T}) where {N,D,T<:Integer} = norm(dd.md * k)
 
 """
    add_peak!(dd::DiffractionData{N,D,T}, k::SVector{N,T}, I::AbstractFloat)
@@ -129,9 +129,9 @@ physicalnorm(k::SVector{N, T}, dd::DiffractionData{N,D,T}) where {N,D,T<:Integer
     - the number of Bragg peaks in the added orbit. If the wavevector is already
     taken into account, the function will return 0.     
 """
-function add_peak!(dd::DiffractionData{N, D, T}, k::SVector{N,T}, I::AbstractFloat) where {N,D,T<:Integer}
+function add_peak!(dd::DiffractionData{N,D,T}, k::SVector{N,T}, I::AbstractFloat) where {N,D,T<:Integer}
     # Create the orbit correponding to the wave vector k:
-    o=make_orbit(k, dd.G)
+    o = make_orbit(k, dd.G)
     # Check if the orbit is extinct
     if o isa ExtinctOrbit
         throw(ArgumentError("The wavevector $k belongs to an extinct orbit."))
@@ -158,40 +158,107 @@ function add_peak!(dd::DiffractionData{N, D, T}, k::SVector{N,T}, I::AbstractFlo
     length(dd.bps)
 end
 
-function find_injective_projector(dd::DiffractionData{N,D,T}, sparseness::Real=8.0)::Tuple{SVector{N,T},T} where {N,D,T<:Integer}
-    # Finds the vector v such as the scalar products of v with all wave vectors in the 
-    # diffraction data are distinct
+"""
+   basis_dn(n::Int)::Matrix{Float64}
+  
+   Generate a basis for the lattice D_n with the distance between the nearest neighbors equal to 2.
+   Parameters:
+    - `n`: The dimension of the lattice.
+   Returns:
+    - An n×n Float64 matrix, where each column represents a basis vector of the lattice D_n.
+"""
+function basis_dn(n::Int)::Matrix{Float64}
+    M = zeros(Float64, n, n)
+    for i in 1:n
+        M[i, i] = 1              # Set diagonal to 1
+        if i < n
+            M[i, i+1] = 1        # Set superdiagonal to 1
+        end
+    end
+    M[n, 1] = -(-1)^n                 # Set bottom-left corner to -1
+    return M * sqrt(2) # Scale the basis vectors to have length 2
+end
+
+"""
+   basis_of_dense_packing(n::Int)::Matrix{Float64}
+  
+   Generate a basis for the lattice corresponding to dense packing of spheres of radius 1 in n-dimensional space.
+   Produces the known densest packings in dimensions from 1 to 5, for higher dimensions falls back 
+   to the D_n lattice.
+   Parameters:
+    - `n`: The dimension of the space.
+   Returns:
+    - An n×n Float64 matrix, where each column represents a basis vector of the lattice.
+"""
+function basis_of_dense_packing(n::Int)::Matrix{Float64}
+    if n < 1
+        throw(ArgumentError("Dimension n must be at least 1."))
+    elseif n == 1
+        return [2.0] # 1D case, just a single basis vector of length 2
+    elseif n == 2
+        return [2.0 1.0; 0.0 sqrt(3)] # 2D case, return basis vectors triangular lattice
+    else
+        return basis_dn(n) # For n >= 3, use the D_n lattice
+    end
+end
+
+
+function find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)::Tuple{SVector{N,T},T} where {N,D,T<:Integer}
     all_k = [k for k in keys(dd.k_to_bp)]
     # Compute the covariance matrix of the wave vectors in dd
     M = MMatrix{N,N,Float64}(zeros(Float64, N, N))
     for k in all_k
+        bpo = dd.k_to_bp[k] # the orbit of the Bragg peak
+        #M .+= k * k' * bpo.I # peacks are weighted by their intensity
         M .+= k * k'
     end
     M = Symmetric(M) # Forces M to be symmetric
     Minv = inv(M)
     rmax = maximum(k' * Minv * k for k in all_k)
     M *= rmax
-    S = M^-0.5 # The scaling matrix
-    maxproj = sparseness * length(all_k) # Maximal possible absolute value of the scalar product k⋅v
+    scaling = M^0.5 # The scaling matrix
+
+    B0 = basis_of_dense_packing(N) # The basis of the dense packing lattice
+
     println("Finding an injective projector...")
-    i=0
+    i = 0
+    candidates=Vector{Tuple{SVector{N,T},T}}()
     while true
-        i+=1
-        r = SVector{N}(randn(N))
-        r *= (maxproj / norm(r)) # make a random vector of length maxproj
-        v = T.(round.(S * r)) # Round the scaled r to the nearest integer vector
+        i += 1
+        R = svd(randn(N, N)).U # Random orthogonal matrix
+        B = R * B0
+        L = (Int.(round.(scaling * B)))' # The rows of L for the basis of a superlattice
+        s = nothing
+        try
+            s = snf(L)
+        catch e
+            continue # SNF may fail because of integer overflow. Try again with a different random matrix
+        end
+        P=L*s.V 
+        if !all(iszero,P[1:(end-1), end])
+            continue # The projector may be non-injective due to rounding of L in the wrong way, try again
+        end
+        v = SVector{N, Int}(s.V[:, end]) # Take the last column of the right unimodular factor as the projector
         xx = [v ⋅ k for k in all_k] # Compute the scalar products
         if length(unique(xx)) == length(xx) # Check if all scalar products are distinct
-            println("Projector $v found after $i iterations")
-            return v, maximum(abs.(xx))
+            push!(candidates, (v, maximum(abs.(xx))))
+            if length(candidates) >= num_candidates
+                break # We have enough candidates, stop the search
+            end
         end
-    end    
+    end
+    # Find the candidate with the minimal maximal scalar product
+    v, maxprod = argmin(x -> x[2], candidates) # Take the candidate with the minimal maximal scalar product
+    println("Projector $v found after $i iterations")
+    println("Maximal scalar product: $maxprod")
+    return (v, maxprod)
+
 end
 
 function formfactors_synthetic(dd::DiffractionData, windowing_function::Function)
     q_max = maximum(physicalnorm(bp.o.aps[1].k, dd) for bp in dd.bps) # The maximum norm of the physical wavevector
     q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
-    ff= ones(Float64, length(dd.bps)) # The form factor is a constant function
+    ff = ones(Float64, length(dd.bps)) # The form factor is a constant function
     for i in 1:length(dd.bps)
         bp = dd.bps[i]
         ap = bp.o.aps[1] # Take the first vector of the orbit
