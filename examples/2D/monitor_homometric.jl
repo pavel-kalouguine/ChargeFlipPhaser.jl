@@ -17,7 +17,7 @@ function example_monitor()
     add_panel!(pm, (1, 1), s, "Homometric structures example", 1.0)
 
     Base.display(pm.fig)
-    do_phasing!(phaser, action=action(pm), algorithm=RandomizedMedianFlip())
+    do_phasing!(phaser, action=action(pm), algorithm=ExperimentalAlgorithm())
 end
 
 example_monitor()

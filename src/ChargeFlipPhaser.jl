@@ -11,7 +11,7 @@ using Makie, GLMakie
 export WeightedF0, DiffractionData, add_peak!, find_injective_projector, 
 metric_data_inconsistency, physicalnorm, formfactor, PhasedData, do_phasing!, ball_autocorr, Phaser,
 PhasingMonitor, Cut2D, add_panel!, action, display,
-AbstractPhasingAlgorithm, RandomizedMedianFlip, formfactors_synthetic
+AbstractPhasingAlgorithm, formfactors_synthetic
 
 include("types.jl")
 include("f0_waaskirf.jl")
@@ -19,6 +19,6 @@ include("diffractiondata.jl")
 include("windowing.jl")
 include("phaser.jl")
 include("phasingmonitor.jl")
-include("algorithms/randomized_median.jl")
+include("algorithms.jl")
 
 end # module PhaserTmp
