@@ -1,10 +1,10 @@
-using ChargeFlipPhaser, StaticArrays, LinearAlgebra, GLMakie
+using ChargeFlipPhaser, GLMakie
 
 function example_monitor()
     include("icosahedral/CdYb/load.jl")
 
-    ff = formfactor(CdYb.dd, ball_autocorr, CdYb.composition, CdYb.B_factor)
-    phaser = Phaser(CdYb.dd, ff)
+
+    phaser = Phaser(CdYb.dd, CdYb.formfactors)
     pm=PhasingMonitor(phaser)
 
     # Add panels to the phasing monitor    
@@ -25,7 +25,7 @@ function example_monitor()
     add_panel!(pm, (2, 3), s3, "Three fold axis", 1)
 
     Base.display(pm.fig)    
-    do_phasing!(phaser, action=action(pm))
+    do_phasing!(phaser, action=action(pm), algorithm=SweepDown())
 end
 
 example_monitor()
