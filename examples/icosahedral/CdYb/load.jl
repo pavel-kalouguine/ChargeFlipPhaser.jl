@@ -24,7 +24,7 @@ end
 dd = DiffractionData(G, Icosahedron.epar * (π / a))
 # Check the consistency of the metric data
 inconsistency = metric_data_inconsistency(dd)
-println("Metric data inconsistency: $inconsistency")
+@info "Metric data inconsistency: $inconsistency"
 
 t = CSV.File(datafilepath; header=7, skipto=9, delim=' ', ignorerepeated=true)
 dt = DataFrame(t)
@@ -36,14 +36,14 @@ for r in eachrow(dt)
     if I > 0.0 && I > dI
         n=add_peak!(dd, k, I)
         if n==0
-            println("Warning: Peak with the wavevector $k already exists in the diffraction data.")
+            @warn "Wavevector $k already added."
         end
     end
     # Sanity check:
     qpar = r.Qpar * (sqrt(2) * π / a)
     push!(ratio_q, qpar / norm(kpar(k)))
 end
-println("Sanity check: $(minimum(ratio_q)) <= q_par/k_par <= $(maximum(ratio_q))")
+@info "Sanity check: $(minimum(ratio_q)) <= q_par/k_par <= $(maximum(ratio_q))"
 
 # Compute the formfactors to apply to the diffraction data
 atomic_formfactor = WeightedF0(composition)
