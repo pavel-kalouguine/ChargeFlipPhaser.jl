@@ -19,7 +19,7 @@ end
 function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}) where {N}
     v, maxproj = find_injective_projector(dd)
     n = Int(ceil(log2(maxproj)))
-    println("Using 2^$(n+1) sampling points")
+    @info "Using 2^$(n+1) sampling points"
     numamps = 2^n
     real_orbits = Vector{Int}()
     complex_orbits = Vector{Int}()
@@ -109,7 +109,7 @@ function set_amplitudes!(phaser::Phaser, wa::WorkingAmplitudes)
 end
 
 function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm, hooks::AbstractHooks=DefaultHooks(), max_iterations::Int=1000)
-    println("Starting phasing...")
+    @info "Starting phasing..."
     f = similar(phaser.f) # Working space for amplitudes, needed since FFTW.mul! modifies the input
     ρ = zeros(Float64, 2 * phaser.numamps) # The vector of the density
     # Prepare the FFT plans for the direct and inverse FFT
