@@ -7,6 +7,9 @@ abstract type AbstractPhasingAlgorithm end
 # Abstract type for the lifecycle hooks
 abstract type AbstractHooks end
 
+# Abstract type for saving results
+abstract type AbstractSaver end
+
 # Utility structure for batch construction of a complex sparse matrix
 struct SparseData
     irows::Vector{Int}
