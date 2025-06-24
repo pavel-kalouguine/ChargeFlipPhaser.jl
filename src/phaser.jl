@@ -76,13 +76,6 @@ function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}) where {N}
     return Phaser(dd, real_orbits, complex_orbits, v, numamps, ampl, p2f_r, p2f_c1, p2f_c2, f)
 end
 
-# Default lifecycle behavior is to do nothing
-on_go(::AbstractHooks) = nothing
-on_show(::AbstractHooks, ::Phaser, ::Dict) = nothing
-is_done(::AbstractHooks) = false
-struct DefaultHooks <: AbstractHooks end
-
-
 struct WorkingAmplitudes
     a_r::Vector{Float64} # The observed amplitudes for the real orbits 
     a_c::Vector{Float64} # The observed amplitudes for the complex orbits
@@ -108,7 +101,24 @@ function set_amplitudes!(phaser::Phaser, wa::WorkingAmplitudes)
     mul!(phaser.f, phaser.p2f_c2, conj(wa.f_c), 1.0, 1.0) # Apply the conjugate complex phases and accumulate
 end
 
-function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm, hooks::AbstractHooks=DefaultHooks(), max_iterations::Int=1000)
+
+# Default lifecycle behavior is to do nothing
+on_go(::AbstractHooks) = nothing
+on_show(::AbstractHooks, ::Phaser, ::Dict) = nothing
+is_done(::AbstractHooks) = false
+function on_save(::AbstractHooks, saver::AbstractSaver,
+    phaser::Phaser, wa::WorkingAmplitudes)
+    save_result(saver, phaser, wa)
+end
+save_result(::AbstractSaver, ::Phaser, ::WorkingAmplitudes) = nothing
+struct DefaultHooks <: AbstractHooks end
+struct DefaultSaver <: AbstractSaver end
+
+
+
+function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm,
+    hooks::AbstractHooks=DefaultHooks(), saver::AbstractSaver=DefaultSaver(),
+    max_iterations::Int=1000)
     @info "Starting phasing..."
     f = similar(phaser.f) # Working space for amplitudes, needed since FFTW.mul! modifies the input
     ρ = zeros(Float64, 2 * phaser.numamps) # The vector of the density
@@ -155,5 +165,6 @@ function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm, hooks:
 
         flip_amplitudes!(wa, algorithm) # Flip the amplitudes applying the given algorithm
     end
+    on_save(hooks, saver, phaser, wa)
 
 end

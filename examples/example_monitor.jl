@@ -25,7 +25,9 @@ function example_monitor()
     add_panel!(pm, (2, 3), s3, "Three fold axis", 1)
 
     Base.display(pm.fig)
-    do_phasing!(phaser, hooks=MonitorHooks(pm), algorithm=SweepDown())
+    output_file_path=joinpath(@__DIR__, "results", "CdYb.csv")
+    do_phasing!(phaser, hooks=MonitorHooks(pm), algorithm=SweepDown(), 
+        saver=CSVSaver(output_file_path))
 end
 
 example_monitor()
