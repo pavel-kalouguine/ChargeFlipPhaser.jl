@@ -129,7 +129,7 @@ physicalnorm(k::SVector{N,T}, dd::DiffractionData{N,D,T}) where {N,D,T<:Integer}
     - the number of Bragg peaks in the added orbit. If the wavevector is already
     taken into account, the function will return 0.     
 """
-function add_peak!(dd::DiffractionData{N,D,T}, k::SVector{N,T}, I::AbstractFloat) where {N,D,T<:Integer}
+function add_peak!(dd::DiffractionData{N,D,T}, k::SVector{N,T}, I::AbstractFloat)::Int where {N,D,T<:Integer}
     # Create the orbit correponding to the wave vector k:
     o = make_orbit(k, dd.G)
     # Check if the orbit is extinct
@@ -208,7 +208,7 @@ function find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)
     # Compute the covariance matrix of the wave vectors in dd
     M = MMatrix{N,N,Float64}(zeros(Float64, N, N))
     for k in all_k
-        bpo = dd.k_to_bp[k] # the orbit of the Bragg peak
+        #bpo = dd.k_to_bp[k] # the orbit of the Bragg peak
         #M .+= k * k' * bpo.I # peacks are weighted by their intensity
         M .+= k * k'
     end
@@ -220,7 +220,7 @@ function find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)
 
     B0 = basis_of_dense_packing(N) # The basis of the dense packing lattice
 
-    println("Finding an injective projector...")
+    @info "Finding an injective projector..."
     i = 0
     candidates=Vector{Tuple{SVector{N,T},T}}()
     while true
@@ -249,8 +249,8 @@ function find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)
     end
     # Find the candidate with the minimal maximal scalar product
     v, maxprod = argmin(x -> x[2], candidates) # Take the candidate with the minimal maximal scalar product
-    println("Projector $v found after $i iterations")
-    println("Maximal scalar product: $maxprod")
+    @info "Projector $v found after $i iterations"
+    @info "Maximal scalar product: $maxprod"
     return (v, maxprod)
 
 end

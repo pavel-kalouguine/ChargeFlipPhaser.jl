@@ -1,41 +1,6 @@
 
-
-
-# Returns the formfactor used for the synthetic data
-# function formfactor(dd::DiffractionData, windowing_function::Function)
-#     q_max = maximum(physicalnorm(dd, bp.o.aps[1].k) for bp in dd.bps) # The maximum norm of the physical wavevector
-#     q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
-#     function ff(q::Real)
-#         if q > q_max
-#             return 0.0
-#         else
-#             return windowing_function(q / q_max)
-#         end
-#     end
-#     return ff
-# end
-
-# Returns the formfactor used for the real diffraction data for a given composition and Debye Waller
-# factor
-# function formfactor(dd::DiffractionData, windowing_function::Function, composition::Vector{Tuple{String,R}}, b_factor::Real) where {R<:Real}
-#     q_max = maximum(physicalnorm(bp.o.aps[1].k, dd) for bp in dd.bps) # The maximum norm of the physical wavevector
-#     q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
-#     atomic_formfactor = WeightedF0(composition)
-#     function ff(q::Real)
-#         if q > q_max
-#             return 0.0
-#         else
-#             κ = q / (4 * π) # sin(θ)/λ
-#             return windowing_function(q / q_max) / (atomic_formfactor(κ) * exp(-b_factor * κ^2))
-#         end
-#     end
-#     return ff
-# end
-
-
 # Utility function returning the per-column numbers of non-zero elements in a CSC sparse matrix
 nnz_per_column(m::SparseMatrixCSC)::Vector{Int} = diff(m.colptr)
-
 
 
 struct Phaser{N}
@@ -54,7 +19,7 @@ end
 function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}) where {N}
     v, maxproj = find_injective_projector(dd)
     n = Int(ceil(log2(maxproj)))
-    println("Using 2^$(n+1) sampling points")
+    @info "Using 2^$(n+1) sampling points"
     numamps = 2^n
     real_orbits = Vector{Int}()
     complex_orbits = Vector{Int}()
@@ -111,8 +76,6 @@ function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}) where {N}
     return Phaser(dd, real_orbits, complex_orbits, v, numamps, ampl, p2f_r, p2f_c1, p2f_c2, f)
 end
 
-const default_callbacks = Dict{String,Function}("go" => () -> nothing, "show" => (args...) -> nothing, "done" => () -> false)
-
 struct WorkingAmplitudes
     a_r::Vector{Float64} # The observed amplitudes for the real orbits 
     a_c::Vector{Float64} # The observed amplitudes for the complex orbits
@@ -123,12 +86,12 @@ struct WorkingAmplitudes
 end
 
 function WorkingAmplitudes(phaser::Phaser)
-    a_r = phaser.ampl[phaser.real_orbits] 
-    a_c = phaser.ampl[phaser.complex_orbits] 
+    a_r = phaser.ampl[phaser.real_orbits]
+    a_c = phaser.ampl[phaser.complex_orbits]
     f_r = a_r .* rand([-1.0, 1.0], length(phaser.real_orbits)) # Set the initial signes randomly
     f_c = a_c .* exp.(2π * im * rand(length(phaser.complex_orbits))) # Set the initial phases randomly
     f_r_back = Vector{ComplexF64}(undef, length(f_r)) # Note: backprojection returns complex amplitudes
-    f_c_back = similar(f_c) 
+    f_c_back = similar(f_c)
     return WorkingAmplitudes(a_r, a_c, f_r, f_c, f_r_back, f_c_back)
 end
 
@@ -138,8 +101,25 @@ function set_amplitudes!(phaser::Phaser, wa::WorkingAmplitudes)
     mul!(phaser.f, phaser.p2f_c2, conj(wa.f_c), 1.0, 1.0) # Apply the conjugate complex phases and accumulate
 end
 
-function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm, action::Dict{String,Function}=default_callbacks, max_iterations::Int=1000)
-    println("Starting phasing...")
+
+# Default lifecycle behavior is to do nothing
+on_go(::AbstractHooks) = nothing
+on_show(::AbstractHooks, ::Phaser, ::Dict) = nothing
+is_done(::AbstractHooks) = false
+function on_save(::AbstractHooks, saver::AbstractSaver,
+    phaser::Phaser, wa::WorkingAmplitudes)
+    save_result(saver, phaser, wa)
+end
+save_result(::AbstractSaver, ::Phaser, ::WorkingAmplitudes) = nothing
+struct DefaultHooks <: AbstractHooks end
+struct DefaultSaver <: AbstractSaver end
+
+
+
+function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm,
+    hooks::AbstractHooks=DefaultHooks(), saver::AbstractSaver=DefaultSaver(),
+    max_iterations::Int=1000)
+    @info "Starting phasing..."
     f = similar(phaser.f) # Working space for amplitudes, needed since FFTW.mul! modifies the input
     ρ = zeros(Float64, 2 * phaser.numamps) # The vector of the density
     # Prepare the FFT plans for the direct and inverse FFT
@@ -149,7 +129,7 @@ function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm, action
     mul_r = nnz_per_column(phaser.p2f_r)
     mul_c = nnz_per_column(phaser.p2f_c1) + nnz_per_column(phaser.p2f_c2)
 
-    wa= WorkingAmplitudes(phaser) # The working amplitudes
+    wa = WorkingAmplitudes(phaser) # The working amplitudes
 
     set_num_threads(4) # TODO: Set the number of threads automatically
 
@@ -160,17 +140,17 @@ function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm, action
 
 
     # Enter the phasing loop
-    for i = 1:max_iterations 
-        set_amplitudes!(phaser, wa) 
-        f.=phaser.f # Copy the amplitudes to the working space
+    for i = 1:max_iterations
+        set_amplitudes!(phaser, wa)
+        f .= phaser.f # Copy the amplitudes to the working space
 
         # Compute the density
         mul!(ρ, f2ρ, f) # Apply the inverse FFT
 
         # Call the callbacks
-        action["show"](phaser, Dict("iteration"=>i, "limits"=>extrema(ρ).*(phaser.numamps)))
-        action["go"]() # A potentially blocking call to wait for the user input        
-        if(action["done"]()) 
+        on_show(hooks, phaser, Dict("iteration" => i, "limits" => extrema(ρ) .* (phaser.numamps)))
+        on_go(hooks) # A potentially blocking call to wait for the user input        
+        if (is_done(hooks))
             break
         end
 
@@ -185,5 +165,6 @@ function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm, action
 
         flip_amplitudes!(wa, algorithm) # Flip the amplitudes applying the given algorithm
     end
+    on_save(hooks, saver, phaser, wa)
 
 end
