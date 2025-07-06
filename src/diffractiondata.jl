@@ -158,49 +158,7 @@ function add_peak!(dd::DiffractionData{N,D,T}, k::SVector{N,T}, I::AbstractFloat
     length(dd.bps)
 end
 
-"""
-   basis_dn(n::Int)::Matrix{Float64}
-  
-   Generate a basis for the lattice D_n with the distance between the nearest neighbors equal to 2.
-   Parameters:
-    - `n`: The dimension of the lattice.
-   Returns:
-    - An n×n Float64 matrix, where each column represents a basis vector of the lattice D_n.
-"""
-function basis_dn(n::Int)::Matrix{Float64}
-    M = zeros(Float64, n, n)
-    for i in 1:n
-        M[i, i] = 1              # Set diagonal to 1
-        if i < n
-            M[i, i+1] = 1        # Set superdiagonal to 1
-        end
-    end
-    M[n, 1] = -(-1)^n                 # Set bottom-left corner to -1
-    return M * sqrt(2) # Scale the basis vectors to have length 2
-end
 
-"""
-   basis_of_dense_packing(n::Int)::Matrix{Float64}
-  
-   Generate a basis for the lattice corresponding to dense packing of spheres of radius 1 in n-dimensional space.
-   Produces the known densest packings in dimensions from 1 to 5, for higher dimensions falls back 
-   to the D_n lattice.
-   Parameters:
-    - `n`: The dimension of the space.
-   Returns:
-    - An n×n Float64 matrix, where each column represents a basis vector of the lattice.
-"""
-function basis_of_dense_packing(n::Int)::Matrix{Float64}
-    if n < 1
-        throw(ArgumentError("Dimension n must be at least 1."))
-    elseif n == 1
-        return [2.0] # 1D case, just a single basis vector of length 2
-    elseif n == 2
-        return [2.0 1.0; 0.0 sqrt(3)] # 2D case, return basis vectors triangular lattice
-    else
-        return basis_dn(n) # For n >= 3, use the D_n lattice
-    end
-end
 
 
 function find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)::Tuple{SVector{N,T},T} where {N,D,T<:Integer}
