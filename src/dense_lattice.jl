@@ -13,7 +13,7 @@ function basis_of_dense_packing(n::Int)::Matrix{Float64}
     if n < 1
         throw(ArgumentError("Dimension n must be at least 1."))
     elseif n == 1
-        return [2.0] # 1D case, just a single basis vector of length 2
+        return [2.0;;] # 1D case, just a single basis vector of length 2
     elseif n == 2
         return [2.0 1.0; 0.0 sqrt(3)] # 2D case, return basis vectors triangular lattice
     elseif n>= 6 && n <= 8
