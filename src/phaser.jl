@@ -103,7 +103,7 @@ end
 
 # Default lifecycle behavior is to do nothing
 on_go(::AbstractHooks) = nothing
-on_show(::AbstractHooks, ::Phaser, ::Dict) = nothing
+on_show(::AbstractHooks, ::Phaser, ::Vector{Float64}, ::Int) = nothing
 is_done(::AbstractHooks) = false
 function on_save(::AbstractHooks, saver::AbstractSaver,
     phaser::Phaser, wa::WorkingAmplitudes)
@@ -147,7 +147,7 @@ function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm,
         mul!(ρ, f2ρ, f) # Apply the inverse FFT
 
         # Call the callbacks
-        on_show(hooks, phaser, Dict("iteration" => i, "limits" => extrema(ρ) .* (phaser.numamps)))
+        on_show(hooks, phaser, ρ, i)
         on_go(hooks) # A potentially blocking call to wait for the user input        
         if (is_done(hooks))
             break
