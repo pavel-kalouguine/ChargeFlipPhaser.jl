@@ -1,31 +1,40 @@
 struct PhasingStatus
     phaser::Phaser
-    extra::Dict
+    ρ::Vector{Float64}
+    iteration::Int
 end
 
 @enum MonitorState Created Running Paused
 
+function format_limits(limits::Tuple{Float64, Float64})::String
+    s=join((@sprintf("%.5g", a) for a in limits), ", ")
+    "limits=($s)"
+end
+
 struct PhasingMonitor
     fig::Figure
     ops::Observable{PhasingStatus}
+    olimits::Observable{Tuple{Float64, Float64}}
     c::Condition
     state::Observable{MonitorState}
 end
 
 function PhasingMonitor(phaser::Phaser)
     fig = Figure()
-    ops = Observable(PhasingStatus(phaser, Dict("limits" => (0.0, 1.0))))
+    ops = Observable(PhasingStatus(phaser, [0.0, 1.0], 0))
+    olimits=lift(ps -> ps.phaser.numamps.*extrema(ps.ρ), ops)
     c = Condition()
     state = Observable(Created)
-    Label(fig[2, 1], lift(ps -> join(("$k = $v" for (k, v) in ps.extra), "\n"), ops), tellwidth=false)
-    go_button = Button(fig[3, 1], label=lift(x -> if x == Created
+    Label(fig[2, 1], lift(ps -> "iteration=$(ps.iteration)", ops), tellwidth=false)
+    Label(fig[3, 1], lift(limits -> format_limits(limits), olimits), tellwidth=false)
+    go_button = Button(fig[4, 1], label=lift(x -> if x == Created
         "START"
     elseif x == Running
         "PAUSE"
     else
         "RESUME"
     end, state), tellwidth=false)
-    monitor = PhasingMonitor(fig, ops, c, state)
+    monitor = PhasingMonitor(fig, ops, olimits, c, state)
     on(go_button.clicks) do x
         if state[] == Created
             state[] = Running
@@ -56,8 +65,8 @@ function on_go(hooks::MonitorHooks)
     hooks.pm.state[] == Running || wait(hooks.pm.c)
 end
 
-function on_show(hooks::MonitorHooks, phaser::Phaser, extra::Dict)
-    hooks.pm.ops[] = PhasingStatus(phaser, extra)
+function on_show(hooks::MonitorHooks, phaser::Phaser,  ρ::Vector{Float64}, iteration::Int)
+    hooks.pm.ops[] = PhasingStatus(phaser, ρ, iteration)
 end
 
 function is_done(hooks::MonitorHooks)
@@ -145,7 +154,7 @@ function add_panel!(pm::PhasingMonitor, (i, j)::Tuple, cut::Cut2D, title::String
         yield()
         make_cut(cutter)
     end, pm.ops)
-    limsig = lift(ps -> ps.extra["limits"], pm.ops)
+    limsig = lift(limits -> limits, pm.olimits)
     panels = pm.fig[1, 1]
     ax = Axis(panels[i, j], title=title, aspect=aspect)
     hidedecorations!(ax)
