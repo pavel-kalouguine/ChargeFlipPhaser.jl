@@ -16,11 +16,10 @@ struct Phaser{N}
     f::Vector{ComplexF64} # The vector of phased amplitudes
 end
 
-function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}) where {N}
+function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}; small_primes=(2,3,5,7)) where {N}
     v, maxproj = find_injective_projector(dd)
-    n = Int(ceil(log2(maxproj)))
-    @info "Using 2^$(n+1) sampling points"
-    numamps = 2^n
+    numamps = nextprod(small_primes, maxproj+1)
+    @info "Using $(2*numamps) sampling points"
     real_orbits = Vector{Int}()
     complex_orbits = Vector{Int}()
     ampl = zeros(Float64, length(dd.bps))
@@ -70,7 +69,7 @@ function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}) where {N}
     p2f_c2 = sparse(cdata2.irows, cdata2.icols, cdata2.vals, numamps + 1, length(complex_orbits)) # The conjugate complex coefficients
     # Prepare the FFT plans for the direct and inverse FFT
     f = zeros(ComplexF64, numamps + 1) # The vector of phased amplitudes
-    ρ = zeros(Float64, 2^(n + 1)) # The vector of the density
+    ρ = zeros(Float64, 2 * numamps) # The vector of the density
     f2ρ = plan_irfft(f, 2 * numamps)
     ρ2f = plan_rfft(ρ)
     return Phaser(dd, real_orbits, complex_orbits, v, numamps, ampl, p2f_r, p2f_c1, p2f_c2, f)
@@ -104,7 +103,7 @@ end
 
 # Default lifecycle behavior is to do nothing
 on_go(::AbstractHooks) = nothing
-on_show(::AbstractHooks, ::Phaser, ::Dict) = nothing
+on_show(::AbstractHooks, ::Phaser, ::Vector{Float64}, ::Int) = nothing
 is_done(::AbstractHooks) = false
 function on_save(::AbstractHooks, saver::AbstractSaver,
     phaser::Phaser, wa::WorkingAmplitudes)
@@ -148,7 +147,7 @@ function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm,
         mul!(ρ, f2ρ, f) # Apply the inverse FFT
 
         # Call the callbacks
-        on_show(hooks, phaser, Dict("iteration" => i, "limits" => extrema(ρ) .* (phaser.numamps)))
+        on_show(hooks, phaser, ρ, i)
         on_go(hooks) # A potentially blocking call to wait for the user input        
         if (is_done(hooks))
             break
