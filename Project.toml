@@ -1,7 +1,7 @@
 name = "ChargeFlipPhaser"
 uuid = "932843b2-4280-42b7-9350-1fdceb79e920"
 authors = ["Pavel Kalugin <pavel.kalouguine@universite-paris-saclay.fr>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
