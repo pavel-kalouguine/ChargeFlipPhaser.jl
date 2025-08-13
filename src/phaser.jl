@@ -2,7 +2,23 @@
 # Utility function returning the per-column numbers of non-zero elements in a CSC sparse matrix
 nnz_per_column(m::SparseMatrixCSC)::Vector{Int} = diff(m.colptr)
 
+"""
+    Phaser{N}
 
+Data structure representing the phaser state.
+
+# Fields
+- `dd`: The diffraction data object.
+- `real_orbits`: The indices of the real orbits in the diffraction data.
+- `complex_orbits`: The indices of the complex orbits in the diffraction data.
+- `v`: The generator of the cyclic sampling grid.
+- `numamps`: The number of 1D amplitudes, not counting the antipodes and the zero wavevector.
+- `ampl`: The vector of the absolute values of amplitudes, in the order of orbits in dd.
+- `p2f_r`: Sparse matrix used to set amplitudes for real orbits.
+- `p2f_c1`: Sparse matrix used to set amplitudes for complex orbits.
+- `p2f_c2`: Sparse matrix used to set amplitudes for complex orbits, conjugated.
+- `f`: The vector of phased amplitudes (on the reciprocal sampling grid)
+"""
 struct Phaser{N}
     dd::DiffractionData
     real_orbits::Vector{Int} # The indices of the real orbits in the diffraction data
@@ -75,6 +91,9 @@ function Phaser(dd::DiffractionData{N}, formfactors::Vector{Float64}; small_prim
     return Phaser(dd, real_orbits, complex_orbits, v, numamps, ampl, p2f_r, p2f_c1, p2f_c2, f)
 end
 
+"""
+    WorkingAmplitudes
+"""
 struct WorkingAmplitudes
     a_r::Vector{Float64} # The observed amplitudes for the real orbits 
     a_c::Vector{Float64} # The observed amplitudes for the complex orbits
@@ -84,6 +103,31 @@ struct WorkingAmplitudes
     f_c_back::Vector{ComplexF64} # The backprojected amplitudes for the complex orbits
 end
 
+"""
+    WorkingAmplitudes
+
+Container for observed, working, and backprojected amplitudes
+used in the phasing workflow.
+
+# Fields
+- `a_r::Vector{Float64}`  
+  Observed amplitudes for the real orbits.
+
+- `a_c::Vector{Float64}`  
+  Observed amplitudes for the complex orbits.
+
+- `f_r::Vector{Float64}`  
+  Current working amplitudes for the real orbits.
+
+- `f_c::Vector{ComplexF64}`  
+  Current working amplitudes for the complex orbits.
+
+- `f_r_back::Vector{ComplexF64}`  
+  Backprojected amplitudes for the real orbits.
+
+- `f_c_back::Vector{ComplexF64}`  
+  Backprojected amplitudes for the complex orbits.
+"""
 function WorkingAmplitudes(phaser::Phaser)
     a_r = phaser.ampl[phaser.real_orbits]
     a_c = phaser.ampl[phaser.complex_orbits]
@@ -110,11 +154,34 @@ function on_save(::AbstractHooks, saver::AbstractSaver,
     save_result(saver, phaser, wa)
 end
 save_result(::AbstractSaver, ::Phaser, ::WorkingAmplitudes) = nothing
+
+"""
+    DefaultHooks <: AbstractHooks
+
+Hook implementation providing the default behavior for the phasing workflow.
+
+`DefaultHooks` performs no interactive operations and is suitable for
+unattended batch execution or automated scripts.
+"""
 struct DefaultHooks <: AbstractHooks end
 struct DefaultSaver <: AbstractSaver end
 
 
+"""
+    do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm,
+    hooks::AbstractHooks=DefaultHooks(), saver::AbstractSaver=DefaultSaver(),
+    max_iterations::Int=1000)
 
+Perform the phasing algorithm on the given `Phaser` object.
+
+# Parameters
+- `phaser`: The `Phaser` object to modify.
+- `algorithm`: The phasing algorithm to use.
+- `hooks`: The hooks to call during the phasing process.
+- `saver`: The saver to use for saving results.
+- `max_iterations`: The maximum number of iterations to perform.
+
+"""
 function do_phasing!(phaser::Phaser; algorithm::AbstractPhasingAlgorithm,
     hooks::AbstractHooks=DefaultHooks(), saver::AbstractSaver=DefaultSaver(),
     max_iterations::Int=1000)

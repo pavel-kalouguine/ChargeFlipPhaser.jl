@@ -9,11 +9,11 @@ import NormalForms: snf
 import Printf: @sprintf
 using Makie, GLMakie
 
-export WeightedF0, DiffractionData, add_peak!, find_injective_projector,
-    metric_data_inconsistency, physicalnorm, formfactor, PhasedData, 
+export WeightedF0, DiffractionData, add_peak!, 
+    metric_data_inconsistency, physicalnorm,   
     do_phasing!, ball_autocorr, Phaser, WorkingAmplitudes,
     PhasingMonitor, Cut2D, add_panel!,
-    AbstractHooks, DefaultHooks, MonitorHooks, display,
+    AbstractHooks, MonitorHooks, display,
     AbstractPhasingAlgorithm, formfactors_synthetic,
     AbstractSaver, CSVSaver
 

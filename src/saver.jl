@@ -1,8 +1,30 @@
 
+"""
+    CSVSaver <: AbstractSaver
+
+Type for saving results in CSV format.
+
+# Fields
+- `output_file_path`: The path to the output CSV file where results will be saved.
+"""
 struct CSVSaver <: AbstractSaver
     output_file_path::String
 end
 
+"""
+    save_result(saver::CSVSaver, phaser::Phaser, wa::WorkingAmplitudes)
+
+Save the results to a CSV file.
+
+The output file has the following columns:
+- `k1`, `k2`, ..., `kn`: The reflection indices.
+- `I`: The peak intensity (the value is taken from the DiffractionData object).
+- `real(ampl)`: The real part of the amplitude.
+- `imag(ampl)`: The imaginary part of the amplitude.
+
+Note that the absolute value of the amplitude is not necessarity equal to 
+the square root of the intensity, because of the form-factors used in the phasing.
+"""
 function save_result(saver::CSVSaver, phaser::Phaser, wa::WorkingAmplitudes)
     bps = phaser.dd.bps
     # Prepare the amplitudes
