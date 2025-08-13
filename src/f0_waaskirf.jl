@@ -2,7 +2,8 @@
 """
     F0WaasKirf
 
-Data used to define the atomic scattering factors of atoms and ions, following 
+Callable object representing the non-dispersive part ``f_0`` of the atomic
+scattering factor for an element or ion. The representation follows 
 the formulas from this article:
 New Analytical Scattering Factor Functions for Free Atoms and Ions for Free 
 Atoms and Ions, D. Waasmaier & A. Kirfel, Acta Cryst. (1995). A51, 416-413                      
@@ -22,6 +23,8 @@ f_0(\\kappa) = c + \\sum_{i=1}^5 a_i \\exp(-b_i*(\\kappa^2))
 - `a`: The vector of coefficients for the exponential terms in the scattering factor
 - `b`: The vector of coefficients for the exponential decay in the scattering factor
 - `c`: The constant term in the scattering factor
+
+The object should be called with a single real argument ``κ = sin(θ) / λ``.
 """
 struct F0WaasKirf
     sym::String
@@ -31,26 +34,14 @@ struct F0WaasKirf
     c::Float64
 end
 
-"""
-    (f::F0WaasKirf)(κ::Float64)::Float64
 
-The non-dispersive part ``f_0`` of the atomic scattering factor for an element or ion
-
-# Parameters
-
-- `κ`: The scattering vector magnitude, defined as `κ = sin(θ) / λ`, where `θ` 
-is the scattering angle and `λ` is the wavelength of the incident radiation.
-
-# Returns
-The non-dispersive part of the atomic scattering factor.
-"""
 (f::F0WaasKirf)(κ::Float64)=f.c+sum(f.a .* exp.(-κ^2*f.b))
 
 """
     WeightedF0
 
-A structure to hold the weighted non-dispersive part of the atomic scattering
-factor for a material of a given composition.
+A callable object representing the weighted non-dispersive part of the atomic 
+scattering factor for a material of a given composition.
 
 # Fields
 - `v`: A vector of tuples, where each tuple contains the `F0WaasKirf` object for 
@@ -62,30 +53,7 @@ from a vector of tuples, where each tuple contains the chemical symbol of the
 atom or ion and its fraction in the material.
 
 # Example
-```julia
-c = [("As", 1.0), ("Ga", 1.0)]
-w = WeightedF0(c)
-```
-"""
-struct WeightedF0
-    v::Vector{Tuple{F0WaasKirf,Float64}}
-    function WeightedF0(c::Vector{Tuple{String, Float64}})
-        n = sum(t[2] for t in c)
-        new([(wktab[t[1]], t[2]/n) for t in c])
-    end
-end
-
-"""
-    (w::WeightedF0)(κ::Float64)::Float64
-
-The weighted non-dispersive part of the atomic scattering factor for the material.
-
-# Parameters
-
-- `κ`: The scattering vector magnitude, defined as `κ = sin(θ) / λ`, where `θ` 
-is the scattering angle and `λ` is the wavelength of the incident radiation.
-
-# Examples
+The object should be called with a single real argument ``κ = sin(θ) / λ``.
 ```julia-repl
 julia> w=WeightedF0([("As", 1.0), ("Ga", 1.0)]); [w(κ) for κ in 0.0:0.2:1.0]
 6-element Vector{Float64}:
@@ -97,6 +65,14 @@ julia> w=WeightedF0([("As", 1.0), ("Ga", 1.0)]); [w(κ) for κ in 0.0:0.2:1.0]
   8.03425166926575
 ```
 """
+struct WeightedF0
+    v::Vector{Tuple{F0WaasKirf,Float64}}
+    function WeightedF0(c::Vector{Tuple{String, Float64}})
+        n = sum(t[2] for t in c)
+        new([(wktab[t[1]], t[2]/n) for t in c])
+    end
+end
+
 (w::WeightedF0)(κ::Float64)::Float64 = sqrt(sum((t[1](κ))^2*t[2] for t in w.v))
 
 waaskirf_filepath() = joinpath(@__DIR__, "..", "data", "f0_WaasKirf.dat")

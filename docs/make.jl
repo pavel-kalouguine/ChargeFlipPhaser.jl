@@ -5,7 +5,8 @@ makedocs(
     modules = [ChargeFlipPhaser],
     pages = [
         "Home" => "index.md",
-        "API Reference" => "api/public.md"
+        "API Reference" => "api/public.md",
+        "Internal API" => "api/private.md"
     ]
 )
 

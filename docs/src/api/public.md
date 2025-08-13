@@ -15,6 +15,11 @@ physicalnorm
 ```@docs
 add_peak!
 ```
+### Form factors
+```@docs
+WeightedF0
+formfactors_synthetic
+```
 
 ## Running the program
 ```@docs
@@ -47,10 +52,5 @@ AbstractHooks
 ```@docs
 AbstractSaver
 CSVSaver
-```
-
-## Miscellaneous
-```@docs
-formfactors_synthetic
 ```
 
