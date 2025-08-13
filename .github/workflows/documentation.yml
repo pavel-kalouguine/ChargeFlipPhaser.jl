@@ -19,8 +19,8 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
-      # - name: Force a registry update
-      #   run: julia -e 'using Pkg; Pkg.UPDATED_REGISTRY_THIS_SESSION[] = false; Pkg.Registry.update()'
+      - name: Add general registry
+        run: julia -e 'using Pkg; Pkg.Registry.add("General")'
       - name: Check registries
         run: julia -e 'using Pkg; println("Registries:"); for reg in Pkg.Registry.reachable_registries() println("- ", reg.name, " (", reg.repo, ")") end'
       - name: Add custom registry
