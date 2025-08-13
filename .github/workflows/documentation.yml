@@ -1,6 +1,6 @@
 name: Documentation
 
-# on:
+on:
 #   push:
 #     branches:
 #       - main
@@ -9,7 +9,7 @@ name: Documentation
 #     branches:
 #       - main
 #     tags: 'v*'
-#   workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   build:
