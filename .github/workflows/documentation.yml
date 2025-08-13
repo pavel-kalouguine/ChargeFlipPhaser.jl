@@ -4,15 +4,12 @@ on:
   push:
     branches:
       - main
-    tags: '*'
+    tags: 'v*'
   pull_request:
     branches:
       - main
-    tags: '*'
+    tags: 'v*'
   workflow_dispatch:
-    branches:
-      - main
-    tags: '*'
 
 jobs:
   build:
@@ -22,6 +19,8 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
+      - name: Add custom registry
+        run: julia -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/pavel-kalouguine/PKPackages"))'
       - name: Instantiate docs environment
         run: julia --project=docs/ -e '
             using Pkg;
