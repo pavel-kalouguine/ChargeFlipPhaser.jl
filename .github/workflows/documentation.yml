@@ -19,15 +19,9 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
+      - name: Set up registries
+        run: julia --project=docs/ -e 'using Pkg; Pkg.Registry.add("General"); Pkg.Registry.add(RegistrySpec(url = "https://github.com/pavel-kalouguine/PKPackages.git")); Pkg.Registry.update()'      
       - name: Install dependencies
-        run: julia --project=docs/ -e 'using Pkg; Pkg.Registry.add("General"); Pkg.Registry.add(RegistrySpec(url = "https://github.com/pavel-kalouguine/PKPackages.git")); Pkg.Registry.update()'
-      - name: Try installing some standard package
-        run: julia -e 'using Pkg; Pkg.add("StaticArrays"); using StaticArrays; println("Success!")'
-      - name: Try installing SpaceGroups package
-        run: julia -e 'using Pkg; Pkg.add("SpaceGroups"); using SpaceGroups; println("Success!")'  
-      - name: Show Julia packages installed
-        run: ls  ~/.julia/packages      
-      - name: Finish dependencies
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Build and deploy
         env:
