@@ -155,7 +155,8 @@ function add_peak!(dd::DiffractionData{N,D,T}, k::SVector{N,T}, I::AbstractFloat
     end
     # Add the Bragg peak to the DiffractionData object
     push!(dd.bps, bp)
-    length(dd.bps)
+    n=length(o.aps)
+    o isa ComplexOrbit ? 2*n : n
 end
 
 
