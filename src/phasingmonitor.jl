@@ -11,6 +11,27 @@ function format_limits(limits::Tuple{Float64, Float64})::String
     "limits=($s)"
 end
 
+"""
+    PhasingMonitor
+
+GUI monitor for the phasing application.
+
+# Fields
+- `fig::Figure`  
+  Makie `Figure` representing the monitor's GUI window.
+
+- `ops::Observable{PhasingStatus}`  
+  Observable triggering widget redraws whenever the phasing status changes.
+
+- `olimits::Observable{Tuple{Float64, Float64}}`  
+  Observable for the extrema of the charge density, used to update the corresponding label in the GUI.
+
+- `c::Condition`  
+  Condition object used to notify the main program about user events.
+
+- `state::Observable{MonitorState}`  
+  Current state of the monitor window (`Created`, `Running`, or `Paused`).
+"""
 struct PhasingMonitor
     fig::Figure
     ops::Observable{PhasingStatus}
@@ -19,6 +40,21 @@ struct PhasingMonitor
     state::Observable{MonitorState}
 end
 
+"""
+    PhasingMonitor(phaser::Phaser) -> PhasingMonitor
+
+Construct a monitor window for the phasing application associated with `phaser`.
+
+The returned [`PhasingMonitor`](@ref) contains the basic GUI layout and controls,
+but no panels for displaying 2D sections of the density.  
+These panels should be added after construction using [`add_panel!`](@ref).
+
+# Arguments
+- `phaser::Phaser`: The phasing engine instance to be monitored.
+
+# Returns
+- `PhasingMonitor`: A new monitor window linked to the given `phaser`.
+"""
 function PhasingMonitor(phaser::Phaser)
     fig = Figure()
     ops = Observable(PhasingStatus(phaser, [0.0, 1.0], 0))
@@ -51,11 +87,34 @@ function PhasingMonitor(phaser::Phaser)
     monitor
 end
 
+"""
+    display(pm::PhasingMonitor)
+
+Display the GUI window of a phasing monitor.
+
+This calls `Base.display` on the underlying Makie figure (`pm.fig`),
+bringing up the monitor window for user interaction.
+
+# Arguments
+- `pm::PhasingMonitor`: The monitor whose GUI window should be displayed.
+"""
 function display(pm::PhasingMonitor)
     Base.display(pm.fig)
 end
 
+"""
+    MonitorHooks <: AbstractHooks
 
+Hooks for integrating the phasing workflow with a [`PhasingMonitor`](@ref) GUI.
+
+`MonitorHooks` wraps a `PhasingMonitor` instance and can be passed to the
+phasing engine so that GUI updates occur automatically at key points
+in the workflow.
+
+# Fields
+- `pm::PhasingMonitor`  
+  The GUI monitor window to be updated during phasing.
+"""
 struct MonitorHooks <: AbstractHooks
     pm::PhasingMonitor
 end
@@ -73,12 +132,46 @@ function is_done(hooks::MonitorHooks)
     !events(hooks.pm.fig.scene).window_open[]
 end
 
+"""
+    Cut2D{N}
+
+Representation of a 2D section (cut) of the charge density in an N-dimensional lattice.
+
+# Type Parameters
+- `N`: The dimension of the problem.
+
+# Fields
+- `direction::SMatrix{2,N}`  
+  A 2×N matrix whose columns are the lattice vectors spanning the cutting plane.
+
+- `origin::SVector{N,Float64}`  
+  Coordinates of the origin of the cutting plane in N-dimensional space.
+
+- `size::Tuple{Int,Int}`  
+  The dimensions of the grid on which the density cut is computed.
+"""
 struct Cut2D{N}
     direction::SMatrix{2,N}
     origin::SVector{N,Float64}
     size::Tuple{Int,Int}
 end
 
+"""
+    Cut2D(dir::Matrix{Int}, orig::Vector{Float64}, sz::Tuple{Int,Int}) -> Cut2D
+
+Construct a `Cut2D` object from standard arrays.
+
+# Arguments
+- `dir::Matrix{Int}`: 2×N matrix whose columns span the cutting plane.
+- `orig::Vector{Float64}`: Coordinates of the origin of the plane (length N).
+- `sz::Tuple{Int,Int}`: Grid size on which the density cut will be computed.
+
+# Returns
+- `Cut2D{N}`: A 2D section of the charge density in N-dimensional space.
+
+# Notes
+- Throws an error if `dir` is not 2×N or if `length(orig) != N`.
+"""
 function Cut2D(dir::Matrix{Int}, orig::Vector{Float64}, sz::Tuple{Int,Int})
     M, N = size(dir)
     if M != 2
@@ -90,6 +183,33 @@ function Cut2D(dir::Matrix{Int}, orig::Vector{Float64}, sz::Tuple{Int,Int})
     Cut2D(SMatrix{2,N}(dir), SVector{N}(orig), sz)
 end
 
+"""
+    Cutter
+
+Data structure for efficiently computing a 2D section (cut) of the charge density.
+
+# Fields
+- `phaser::Phaser`  
+  The phasing engine providing the amplitudes and lattice information.
+
+- `cut::Cut2D`  
+  The 2D section specification.
+
+- `fproj::Matrix{ComplexF64}`  
+  Projection of the amplitudes onto the cutting plane.
+
+- `ρ::Matrix{Float64}`  
+  The computed density values on the 2D cut.
+
+- `f2fproj1::SparseMatrixCSC{ComplexF64}`  
+  Sparse matrix converting 1D amplitudes to the cut for the original directions.
+
+- `f2fproj2::SparseMatrixCSC{ComplexF64}`  
+  Sparse matrix for the antipodal directions.
+
+- `fproj2ρ`  
+  IRFFT plan for converting the projected amplitudes to real-space density.
+"""
 struct Cutter
     phaser::Phaser
     cut::Cut2D
@@ -100,9 +220,39 @@ struct Cutter
     fproj2ρ # The irfft plan
 end
 
+"""
+    alias(k::SVector{M,Int}, size::NTuple{M,Int}) -> NTuple{M,Int}
+
+Convert an integer vector `k` into 1-based indices suitable for FFT arrays.
+
+# Arguments
+- `k::SVector{M,Int}`: The input integer vector (e.g., a lattice index).
+- `size::NTuple{M,Int}`: The dimensions of the FFT grid.
+
+# Returns
+- `NTuple{M,Int}`: 1-based indices corresponding to `k`, wrapped modulo the grid size.
+
+# Notes
+- This ensures that negative or out-of-bounds indices are correctly mapped
+  into the valid FFT array range.
+"""
 alias(k::SVector{M,Int}, size::NTuple{M,Int}) where M =
     tuple((mod.(k, SVector{M,Int}(size...)) .+ 1)...)
 
+"""
+    Cutter(phaser::Phaser, cut::Cut2D) -> Cutter
+
+Construct a `Cutter` object for efficiently computing a 2D section of the charge density.
+
+# Arguments
+- `phaser::Phaser`: The phasing engine providing the amplitudes and lattice information.
+- `cut::Cut2D`: Specification of the 2D section (cut) to compute.
+
+# Returns
+- `Cutter`: A data structure containing precomputed projections and FFT plans
+  for fast computation of the density cut.
+
+"""    
 function Cutter(phaser::Phaser, cut::Cut2D)
     m, n = cut.size
     mf = div(m, 2) + 1 # The first dimension in the frequencies domain
@@ -147,6 +297,26 @@ function make_cut(cutter::Cutter)
     cutter.ρ * length(cutter.fproj) # Normalize
 end
 
+"""
+    add_panel!(pm::PhasingMonitor, (i, j)::Tuple, cut::Cut2D, title::String, aspect::Real)
+
+Add a panel to the GUI monitor window to visualize a 2D section of the charge density.
+
+The panel is placed at grid position `(i, j)` within the monitor layout and
+is dynamically updated whenever the phasing status or charge-density limits change.
+
+# Arguments
+- `pm::PhasingMonitor`: The monitor window to which the panel will be added.
+- `(i, j)::Tuple`: Grid coordinates (row, column) in the monitor's layout.
+- `cut::Cut2D`: The specification of the 2D section to visualize.
+- `title::String`: Title displayed above the panel.
+- `aspect::Real`: Aspect ratio of the panel's axes.
+
+# Notes
+- The charge density cut is computed using a [`Cutter`](@ref) constructed from `pm`'s current `Phaser`.
+- Panel content updates automatically via observables linked to `pm.ops` and `pm.olimits`.
+- Decorations are hidden for a cleaner visual layout.
+"""
 function add_panel!(pm::PhasingMonitor, (i, j)::Tuple, cut::Cut2D, title::String, aspect::Real)
     phaser = pm.ops[].phaser # Get the phaser from the observable
     cutter = Cutter(phaser, cut)
