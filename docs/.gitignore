@@ -1,0 +1,31 @@
+# Documentation build outputs
+/build/
+/site/
+
+# Documenter.jl working files
+/.documenter/
+/__site/
+
+# Local environment files
+/.env/
+/.vscode/
+
+# Generated documentation assets
+/assets/*.css
+/assets/*.js
+!/assets/*.min.*  # Keep minified files if manually added
+
+# Notebook checkpoints (if you use Jupyter notebooks for examples)
+/.ipynb_checkpoints/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Editor-specific files
+*.swp
+*~
+.~lock.*
+
+# Doctest temporary files
+/.doctests/

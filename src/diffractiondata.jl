@@ -160,8 +160,21 @@ function add_peak!(dd::DiffractionData{N,D,T}, k::SVector{N,T}, I::AbstractFloat
 end
 
 
+"""
+    find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)::Tuple{SVector{N,T},T} where {N,D,T<:Integer}
 
+    Construct a cyclic anti-aliasing sampling grid and returns it generator
 
+# Arguments
+- `dd::DiffractionData`: The diffraction data object.
+- `num_candidates::Int`: The number of candidate projectors to try.
+
+# Returns
+- A tuple containing the integer vector representing the generator of the cyclic anti-aliasing sampling grid
+  and the maximal scalar product of this vector with the wave vectors in the diffraction data.
+
+  It is guaranteed that all scalar
+"""
 function find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)::Tuple{SVector{N,T},T} where {N,D,T<:Integer}
     all_k = [k for k in keys(dd.k_to_bp)]
     # Compute the covariance matrix of the wave vectors in dd
@@ -214,7 +227,20 @@ function find_injective_projector(dd::DiffractionData{N,D,T}; num_candidates=10)
 
 end
 
-function formfactors_synthetic(dd::DiffractionData, windowing_function::Function)
+
+"""
+    formfactors_synthetic(dd::DiffractionData, windowing_function::Function)::Vector{Float64}
+
+Computes the regularizing part of the form factors to use with the diffraction data.
+
+# Arguments
+- `dd::DiffractionData`: The diffraction data object.
+- `windowing_function::Function`: The regularizing windowing function to apply.
+
+# Returns
+- A vector of form factors.
+"""
+function formfactors_synthetic(dd::DiffractionData, windowing_function::Function)::Vector{Float64}
     q_max = maximum(physicalnorm(bp.o.aps[1].k, dd) for bp in dd.bps) # The maximum norm of the physical wavevector
     q_max *= (1.0 + 1.0 / length(dd.bps)) # Scale the q_max up not to lose the data of the peak with the biggest q
     ff = ones(Float64, length(dd.bps)) # The form factor is a constant function
