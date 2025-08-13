@@ -19,6 +19,8 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
+      - name: Remove custom registry
+        run: julia -e 'using Pkg; if "PKPackages" in keys(Pkg.Registry.reachable_registries()) Pkg.Registry.rm("PKPackages") end'
       - name: Add general registry
         run: julia -e 'using Pkg; Pkg.Registry.add("General")'
       - name: Check registries
