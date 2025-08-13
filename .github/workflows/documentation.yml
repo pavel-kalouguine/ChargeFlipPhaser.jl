@@ -24,7 +24,7 @@ jobs:
       - name: Check registries
         run: julia -e 'using Pkg; println("Registries:"); for reg in Pkg.Registry.reachable_registries() println("- ", reg.name, " (", reg.repo, ")") end'
       - name: Add custom registry
-        run: julia -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/pavel-kalouguine/PKPackages"))'
+        run: julia -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/pavel-kalouguine/PKPackages.git"))'
       - name: Check registries
         run: julia -e 'using Pkg; println("Registries:"); for reg in Pkg.Registry.reachable_registries() println("- ", reg.name, " (", reg.repo, ")") end'
       - name: Instantiate docs environment
