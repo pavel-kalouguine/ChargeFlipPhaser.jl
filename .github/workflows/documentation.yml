@@ -19,6 +19,8 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
+      - name: Force a registry update
+        run: julia -e 'using Pkg; Pkg.UPDATED_REGISTRY_THIS_SESSION[] = false; Pkg.Registry.update()'
       - name: Add custom registry
         run: julia -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url = "https://github.com/pavel-kalouguine/PKPackages"))'
       - name: Instantiate docs environment
