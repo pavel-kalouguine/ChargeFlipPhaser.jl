@@ -1,13 +1,26 @@
 """
-   basis_of_dense_packing(n::Int)::Matrix{Float64}
-  
-   Generate a basis for the lattice corresponding to dense packing of spheres of radius 1 in n-dimensional space.
-   Produces the known densest packings in dimensions from 1 to 8, for higher dimensions falls back 
-   to the D_n lattice.
-   Parameters:
-    - `n`: The dimension of the space.
-   Returns:
-    - An n×n Float64 matrix, where each column represents a basis vector of the lattice.
+    basis_of_dense_packing(n::Int)::Matrix{Float64}
+
+Generate a basis for the lattice corresponding to the densest known packing of spheres in n-dimensional space.
+
+# Arguments
+- `n`: The dimension of the space (must be a positive integer).
+
+# Returns
+An `n×n` `Matrix{Float64}` where each column represents a basis vector of the lattice.
+
+# Details
+Produces the known densest packings in dimensions from 1 to 8. For higher dimensions, falls back to the Dₙ lattice.
+
+The sphere packing uses spheres of radius 1 centered at the lattice points.
+
+# Examples
+```julia-repl
+julia> basis_of_dense_packing(2)  # Returns basis for hexagonal packing in 2D
+2×2 Matrix{Float64}:
+ 2.0  1.0
+ 0.0  1.73205
+```
 """
 function basis_of_dense_packing(n::Int)::Matrix{Float64}
     if n < 1
@@ -24,13 +37,29 @@ function basis_of_dense_packing(n::Int)::Matrix{Float64}
 end
 
 """
-   basis_dn(n::Int)::Matrix{Float64}
-  
-   Generate a basis for the lattice D_n with the distance between the nearest neighbors equal to 2.
-   Parameters:
-    - `n`: The dimension of the lattice.
-   Returns:
-    - An n×n Float64 matrix, where each column represents a basis vector of the lattice D_n.
+    basis_dn(n::Int)::Matrix{Float64}
+
+Generate a basis for the Dₙ lattice with nearest-neighbor distance 2.
+
+# Arguments
+- `n`: The dimension of the lattice (must be a positive integer).
+
+# Returns
+An `n×n` `Matrix{Float64}` where each column represents a basis vector of the Dₙ lattice.
+
+# Details
+The Dₙ lattice is defined such that the minimal distance between lattice points is 2. 
+
+For `n ≥ 3`, this corresponds to the root lattice of the SO(2n) Lie algebra.
+
+# Examples
+```julia-repl
+julia> ChargeFlipPhaser.basis_dn(3)  # Basis for the D₃ lattice (cubic FCC in 3D)
+3×3 Matrix{Float64}:
+ 1.41421  1.41421  0.0
+ 0.0      1.41421  1.41421
+ 1.41421  0.0      1.41421
+```
 """
 function basis_dn(n::Int)::Matrix{Float64}
     M = zeros(Float64, n, n)
@@ -47,12 +76,20 @@ end
 
 """
     basis_e678(dim::Int)::Matrix{Float64}
-      
-    Generate a basis for the E6, E7, or E8 lattice with the distance between the nearest neighbors equal to 2.
-    Parameters:
-     - `dim`: The dimension of the lattice (6, 7, or 8).
-    Returns:
-     - An n×n Float64 matrix, where each column represents a basis vector of the E_n lattice.
+
+Generate a basis for the E₆, E₇, or E₈ root lattice with nearest-neighbor distance 2.
+
+# Arguments
+- `dim`: The dimension of the lattice (must be 6, 7, or 8).
+
+# Returns
+A `dim×dim` `Matrix{Float64}` where each column represents a basis vector of the Eₙ lattice.
+
+# Details
+The Eₙ lattices are exceptional root lattices with minimal distance 2 between lattice points:
+- **E₈**: The unique even unimodular lattice in 8D (densest sphere packing in ℝ⁸).
+- **E₇**: A 7D lattice related to one of the exceptional Lie algebras.
+- **E₆**: A 6D lattice related to one of the exceptional Lie algebras.
 """
 function basis_e678(dim::Int)::Matrix{Float64}
     if dim < 6 || dim > 8

@@ -1,11 +1,48 @@
+"""
+    PhasingStatus
+
+Container for the current status of the phasing process, used for GUI updates.
+
+# Fields
+- `phaser::Phaser`
+  The phaser instance being monitored.
+
+- `ρ::Vector{Float64}`
+  The current charge density.
+
+- `iteration::Int`
+  The current iteration number.
+"""
 struct PhasingStatus
     phaser::Phaser
     ρ::Vector{Float64}
     iteration::Int
 end
 
+"""
+    MonitorState
+
+Enumeration representing the state of the phasing monitor GUI.
+
+# Values
+- `Created`: The monitor has been created but not started.
+- `Running`: The monitor is actively running and updating.
+- `Paused`: The monitor is paused and not updating.
+"""
 @enum MonitorState Created Running Paused
 
+
+"""
+    FormatLimits
+
+Format the limits for display in the GUI.
+
+# Arguments
+- `limits::Tuple{Float64, Float64}`: The limits to format.
+
+# Returns
+- `String`: The formatted limits string.
+"""
 function format_limits(limits::Tuple{Float64, Float64})::String
     s=join((@sprintf("%.5g", a) for a in limits), ", ")
     "limits=($s)"

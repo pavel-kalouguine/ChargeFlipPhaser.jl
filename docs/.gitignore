@@ -29,3 +29,5 @@ Thumbs.db
 
 # Doctest temporary files
 /.doctests/
+
+Manifest.toml
