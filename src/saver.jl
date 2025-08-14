@@ -24,6 +24,11 @@ The output file has the following columns:
 
 Note that the absolute value of the amplitude is not necessarity equal to 
 the square root of the intensity, because of the form-factors used in the phasing.
+
+# Arguments
+- `saver::CSVSaver`: The CSV saver instance.
+- `phaser::Phaser`: The phaser instance containing the diffraction data.
+- `wa::WorkingAmplitudes`: The current working amplitudes to save.
 """
 function save_result(saver::CSVSaver, phaser::Phaser, wa::WorkingAmplitudes)
     bps = phaser.dd.bps

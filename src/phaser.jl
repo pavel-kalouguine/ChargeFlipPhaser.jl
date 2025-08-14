@@ -93,18 +93,6 @@ end
 
 """
     WorkingAmplitudes
-"""
-struct WorkingAmplitudes
-    a_r::Vector{Float64} # The observed amplitudes for the real orbits 
-    a_c::Vector{Float64} # The observed amplitudes for the complex orbits
-    f_r::Vector{Float64} # The working amplitudes for the real orbits
-    f_c::Vector{ComplexF64} # The working amplitudes for the complex orbits
-    f_r_back::Vector{ComplexF64} # The backprojected amplitudes for the real orbits
-    f_c_back::Vector{ComplexF64} # The backprojected amplitudes for the complex orbits
-end
-
-"""
-    WorkingAmplitudes
 
 Container for observed, working, and backprojected amplitudes
 used in the phasing workflow.
@@ -127,7 +115,20 @@ used in the phasing workflow.
 
 - `f_c_back::Vector{ComplexF64}`  
   Backprojected amplitudes for the complex orbits.
+
+# Constructors
+- `WorkingAmplitudes(phaser::Phaser)`: Create a new `WorkingAmplitudes` object from a `Phaser` object.
 """
+struct WorkingAmplitudes
+    a_r::Vector{Float64} # The observed amplitudes for the real orbits 
+    a_c::Vector{Float64} # The observed amplitudes for the complex orbits
+    f_r::Vector{Float64} # The working amplitudes for the real orbits
+    f_c::Vector{ComplexF64} # The working amplitudes for the complex orbits
+    f_r_back::Vector{ComplexF64} # The backprojected amplitudes for the real orbits
+    f_c_back::Vector{ComplexF64} # The backprojected amplitudes for the complex orbits
+end
+
+
 function WorkingAmplitudes(phaser::Phaser)
     a_r = phaser.ampl[phaser.real_orbits]
     a_c = phaser.ampl[phaser.complex_orbits]
@@ -174,7 +175,7 @@ struct DefaultSaver <: AbstractSaver end
 
 Perform the phasing algorithm on the given `Phaser` object.
 
-# Parameters
+# Arguments
 - `phaser`: The `Phaser` object to modify.
 - `algorithm`: The phasing algorithm to use.
 - `hooks`: The hooks to call during the phasing process.

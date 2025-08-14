@@ -14,7 +14,7 @@ where ``\\lambda`` is the photon wavelengh and ``\\theta`` is incident angle.
 This function can be approximated by a function:			    
 
 ```math
-f_0(\\kappa) = c + \\sum_{i=1}^5 a_i \\exp(-b_i*(\\kappa^2)) 				    
+f_0(\\kappa) = c + \\sum_{i=1}^5 a_i \\exp(-b_i\\kappa^2) 				    
 ```
 
 # Fields
