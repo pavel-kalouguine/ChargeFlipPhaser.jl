@@ -7,7 +7,7 @@ import FFTW: plan_irfft, plan_rfft, mul!, set_num_threads, irfft
 import Statistics: median
 import NormalForms: snf
 import Printf: @sprintf
-using Makie, GLMakie
+using Makie
 
 export WeightedF0, DiffractionData, add_peak!, 
     metric_data_inconsistency, physicalnorm,   
