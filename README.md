@@ -2,7 +2,7 @@
 
 *A Julia toolkit for dual-space phasing algorithm development*
 
-**ChargeFlipPhaser.jl** is a pure Julia implementation of a **generalized charge-flipping phasing algorithm** for resolving crystal structures with **arbitrary space groups in any dimension**. 
+**ChargeFlipPhaser.jl** is a platform for developing and testing charge-flipping algorithms under symmetry constraints in any dimensions. 
 
 
 
