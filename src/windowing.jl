@@ -9,9 +9,12 @@ Computes the autocorrelation function of the indicator functions of two
 three-dimensional spherical balls of diameter 1. The result is normalized 
 to 1 at the origin.
 
-# Parameters
+# Arguments
 - `x`: The distance from the center of the balls, normalized to the radius 
 (which is 0.5).
+
+# Returns
+- `Float64`: The value of the autocorrelation function at distance `x`.
 """
 function ball_autocorr(x::Float64)::Float64
     if x < 0.0
