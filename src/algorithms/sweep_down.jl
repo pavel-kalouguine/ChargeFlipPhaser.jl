@@ -18,5 +18,5 @@ end
 
 function flip_amplitudes!(wa::WorkingAmplitudes, ::SweepDown)
     wa.f_r .= wa.a_r .* sign.(real.(wa.f_r_back))
-    wa.f_c .= wa.a_c .* (wa.f_c_back ./ abs.(wa.f_c_back))
+    wa.f_c .= wa.a_c .* safe_phase.(wa.f_c_back)
 end

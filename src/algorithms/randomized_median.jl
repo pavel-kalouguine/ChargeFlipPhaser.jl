@@ -30,7 +30,7 @@ function flip_amplitudes!(wa::WorkingAmplitudes, algorithm::RandomizedMedianFlip
         f_out=wa.f_c_back[i]
         df=f_out-f_in
         if abs(f_in) < 2*rand()*algorithm.threshold*abs(df)
-            ϕ = f_out/abs(f_out)
+            ϕ = safe_phase(f_out)
             wa.f_c[i]=ϕ * wa.a_c[i]
         end
     end
