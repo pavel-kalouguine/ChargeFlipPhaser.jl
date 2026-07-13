@@ -1,7 +1,7 @@
 # Utilities shared by the phasing algorithms
 
 """
-    safe_phase(z::Complex{T}) where {T}
+    safe_phase(z::Complex{T}) where {T<:AbstractFloat}
 
 Return the unit-modulus complex number with the same phase as `z` (`z / abs(z)`),
 or `one(z)` when `z` is zero, where the phase is undefined.
